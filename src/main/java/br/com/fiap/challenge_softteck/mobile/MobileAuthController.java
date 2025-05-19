@@ -31,24 +31,14 @@ public class MobileAuthController {
     @PostMapping
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
         String idTokenString = body.get("id_token");
-        if (idTokenString == null) {
+        if (idTokenString == null)
             return ResponseEntity.badRequest().body(Map.of("error", "missing id_token"));
-        }
 
-        GoogleIdToken idToken;
-        try {
-            idToken = verifier.verify(idTokenString);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
-
-        if (idToken == null) {
+        GoogleIdToken idToken = verifier.verify(idTokenString);
+        if (idToken == null)
             return ResponseEntity.status(401).body(Map.of("error", "invalid id_token"));
-        }
 
-        String sub = idToken.getPayload().getSubject();
-        UUID uid   = mapper.mapSubToUuid(sub);
+        UUID uid = mapper.mapSubToUuid(idToken.getPayload().getSubject());
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("challenge-softteck")
@@ -57,9 +47,12 @@ public class MobileAuthController {
                 .claim("uid", uid.toString())
                 .build();
 
-        String jwt = encoder.encode(JwtEncoderParameters.from(claims))
-                .getTokenValue();
-
+        String jwt = encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
         return ResponseEntity.ok(Map.of("jwt", jwt));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok(Map.of("status", "logged-out"));
     }
 }

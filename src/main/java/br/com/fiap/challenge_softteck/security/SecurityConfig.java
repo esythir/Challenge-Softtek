@@ -38,7 +38,7 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/error", "/", "/auth/mobile").permitAll()
+                        .requestMatchers("/error", "/", "/auth/mobile", "/auth/mobile/logout").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth -> oauth
                         .defaultSuccessUrl("/home", true)
