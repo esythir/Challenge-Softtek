@@ -1,4 +1,4 @@
-package br.com.fiap.challenge_softteck.mobile;
+package br.com.fiap.challenge_softteck.controller.mobile;
 
 import br.com.fiap.challenge_softteck.auth.GoogleTokenVerifierService;
 import br.com.fiap.challenge_softteck.auth.UserMappingService;

@@ -18,7 +18,7 @@ public class UserMappingService {
     public UUID mapSubToUuid(String sub) {
 
         UUID id = jdbc.query(
-                "SELECT user_uuid FROM TB_AUTH_MAP WHERE sub = ?",
+                "SELECT user_uuid FROM TB_USER_MAP WHERE sub = ?",
                 ps -> ps.setString(1, sub),
                 rs -> rs.next() ? UuidUtil.bytesToUuid(rs.getBytes(1)) : null
         );
@@ -29,7 +29,7 @@ public class UserMappingService {
         byte[] uuidBytes = UuidUtil.uuidToBytes(id);
 
         jdbc.update(
-                "INSERT INTO TB_AUTH_MAP(sub, user_uuid) VALUES (?, ?)",
+                "INSERT INTO TB_USER_MAP(sub, user_uuid) VALUES (?, ?)",
                 ps -> {
                     ps.setString(1, sub);
                     ps.setBytes (2, uuidBytes);

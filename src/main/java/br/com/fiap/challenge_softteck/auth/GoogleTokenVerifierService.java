@@ -12,9 +12,6 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.List;
 
-/**
- * Valida um id_token gerado pelo Google Sign-In (Android / Web-One-Tap).
- */
 @Service
 public class GoogleTokenVerifierService {
 

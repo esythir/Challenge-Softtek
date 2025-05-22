@@ -35,15 +35,22 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/error", "/", "/auth/mobile", "/auth/mobile/logout").permitAll()
-                        .anyRequest().authenticated())
-                .oauth2Login(oauth -> oauth
-                        .defaultSuccessUrl("/home", true)
-                        .userInfoEndpoint(u -> u.oidcUserService(new OidcUserService())))
-                .logout(l -> l.logoutSuccessUrl("/"))
-                .build();
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/error", "/auth/mobile", "/auth/mobile/logout", "/oauth2/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth -> oauth
+                .defaultSuccessUrl("/home", true)
+                .userInfoEndpoint(u -> u.oidcUserService(new OidcUserService()))
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> { /* usa configuração padrão ou custom JwtDecoder */ })
+            )
+            .logout(l -> l.logoutSuccessUrl("/"));
+
+        return http.build();
     }
+
 }

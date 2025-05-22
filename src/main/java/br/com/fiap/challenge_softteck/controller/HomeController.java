@@ -1,4 +1,4 @@
-package br.com.fiap.challenge_softteck.web;
+package br.com.fiap.challenge_softteck.controller;
 
 import br.com.fiap.challenge_softteck.auth.UserMappingService;
 import org.springframework.http.ResponseEntity;
