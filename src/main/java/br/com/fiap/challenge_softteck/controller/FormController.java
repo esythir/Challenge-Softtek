@@ -26,6 +26,13 @@ public class FormController {
         return formService.listAvailable(uuid, type);
     }
 
+//    @GetMapping
+//    public List<FormListDTO> list(@RequestParam(required=false) String type) {
+//        byte[] dummyUuid = new byte[16];
+//        return formService.listAvailable(dummyUuid, type);
+//    }
+
+
     @GetMapping("/{id}")
     public FormDetailDTO detail(@PathVariable Long id) {
         return formService.getDetail(id);

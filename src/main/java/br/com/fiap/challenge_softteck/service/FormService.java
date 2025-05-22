@@ -17,18 +17,40 @@ public class FormService {
     private final FormResponseRepository respRepo;
 
     public List<FormListDTO> listAvailable(byte[] userUuid, String type) {
-        var list = formRepo.findActiveByType(type);
         List<FormListDTO> out = new ArrayList<>();
-        for (var f : list) {
+        LocalDateTime now = LocalDateTime.now();
+
+        for (var f : formRepo.findActiveByType(type)) {
             LocalDateTime last = respRepo.lastAnswered(f.getId(), userUuid);
-            LocalDateTime nextAllowed = last == null ? LocalDateTime.MIN
-                    : last.plusDays(f.getPeriodicityDays());
-            if (nextAllowed.isBefore(LocalDateTime.now())) {
+            LocalDateTime nextAllowed;
+
+            switch (f.getFormType()) {
+                case "CHECKIN":
+                case "REPORT":
+                    nextAllowed = now.minusSeconds(1);
+                    break;
+
+                default:
+                    if (last == null) {
+                        nextAllowed = LocalDateTime.MIN;
+                    } else {
+                        nextAllowed = last.plusDays(f.getPeriodicityDays());
+                    }
+            }
+
+            if (!nextAllowed.isAfter(now)) {
                 out.add(new FormListDTO(
-                        f.getId(), f.getCode(), f.getName(), f.getFormType(),
-                        f.getDescription(), nextAllowed, last));
+                        f.getId(),
+                        f.getCode(),
+                        f.getName(),
+                        f.getFormType(),
+                        f.getDescription(),
+                        nextAllowed,
+                        last
+                ));
             }
         }
+
         return out;
     }
 

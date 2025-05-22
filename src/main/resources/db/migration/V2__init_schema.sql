@@ -13,6 +13,7 @@ CREATE TABLE TB_FORM (
     DESCRIPTION             VARCHAR2(255)   NULL,
     IS_ACTIVE               CHAR(1)         DEFAULT 'Y' NOT NULL, -- Y/N
     PERIODICITY_DAYS        NUMBER(4)       NOT NULL, -- ex.: 1 = diário, 7 = semanal, 90 = 3 meses…
+    REMINDER_DAYS           NUMBER(4),
     CREATED_AT              TIMESTAMP       DEFAULT SYSTIMESTAMP,
     UPDATED_AT              TIMESTAMP       DEFAULT SYSTIMESTAMP
 );

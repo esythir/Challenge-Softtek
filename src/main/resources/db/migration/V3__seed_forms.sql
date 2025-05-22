@@ -1,15 +1,15 @@
 /* 1. FORMS SEEDING */
-INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, DESCRIPTION)
-VALUES (SQ_FORM.NEXTVAL, 'CHECKIN',     'Check-in Diário',      'CHECKIN',        1,  'Responda diariamente como você se sentiu.');
+INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, REMINDER_DAYS, DESCRIPTION)
+VALUES (SQ_FORM.NEXTVAL, 'CHECKIN',     'Check-in Diário',      'CHECKIN',        1, NULL,  'Responda diariamente como você se sentiu.');
 
-INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, DESCRIPTION)
-VALUES (SQ_FORM.NEXTVAL, 'SELF_ASSESS', 'Autoavaliação',        'SELF_ASSESSMENT',60, 'Questionário de riscos psicossociais.');
+INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, REMINDER_DAYS, DESCRIPTION)
+VALUES (SQ_FORM.NEXTVAL, 'SELF_ASSESS', 'Autoavaliação',        'SELF_ASSESSMENT',7, 60, 'Questionário de riscos psicossociais.');
 
-INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, DESCRIPTION)
-VALUES (SQ_FORM.NEXTVAL, 'CLIMATE',     'Diagnóstico de Clima', 'CLIMATE',        90, 'Diagnóstico do clima organizacional.');
+INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, REMINDER_DAYS, DESCRIPTION)
+VALUES (SQ_FORM.NEXTVAL, 'CLIMATE',     'Diagnóstico de Clima', 'CLIMATE',        7, 90, 'Diagnóstico do clima organizacional.');
 
-INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, DESCRIPTION)
-VALUES (SQ_FORM.NEXTVAL, 'REPORT',      'Canal de Escuta',      'REPORT',         0,  'Reporte ocorrências no ambiente de trabalho.');
+INSERT INTO TB_FORM (ID, CODE, NAME, FORM_TYPE, PERIODICITY_DAYS, REMINDER_DAYS, DESCRIPTION)
+VALUES (SQ_FORM.NEXTVAL, 'REPORT',      'Canal de Escuta',      'REPORT',         0, NULL, 'Reporte ocorrências no ambiente de trabalho.');
 
 -- ----------------------------------------------------------
 -- 2. OPTIONS AND QUESTIONS SEEDING

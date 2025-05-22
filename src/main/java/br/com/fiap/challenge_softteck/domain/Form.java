@@ -31,6 +31,9 @@ public class Form {
     @Column(name = "PERIODICITY_DAYS")
     private Integer periodicityDays;
 
+    @Column(name = "REMINDER_DAYS")
+    private Integer reminderDays;
+
     @Column(name="IS_ACTIVE",
             columnDefinition="CHAR(1)")
     private Boolean active; // 'Y' / 'N'
