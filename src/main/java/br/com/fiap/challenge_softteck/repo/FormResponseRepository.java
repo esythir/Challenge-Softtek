@@ -3,10 +3,8 @@ package br.com.fiap.challenge_softteck.repo;
 import br.com.fiap.challenge_softteck.domain.FormResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,6 +31,21 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, Long
             "  AND fr.answeredAt >= :from " +
             "  AND fr.answeredAt <  :to")
     List<FormResponse> findCheckinsBetween(
+            @Param("uuid") byte[] uuid,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to
+    );
+
+    @Query("SELECT DISTINCT fr FROM FormResponse fr " +
+            "LEFT JOIN FETCH fr.answers a " +
+            "LEFT JOIN FETCH a.option o " +
+            "LEFT JOIN FETCH a.question q " +
+            "WHERE fr.form.code = :code " +
+            "  AND fr.userUuid = :uuid " +
+            "  AND fr.answeredAt >= :from " +
+            "  AND fr.answeredAt <  :to")
+    List<FormResponse> findByFormCodeBetween(
+            @Param("code") String code,
             @Param("uuid") byte[] uuid,
             @Param("from") LocalDateTime from,
             @Param("to")   LocalDateTime to

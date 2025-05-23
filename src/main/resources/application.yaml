@@ -3,9 +3,9 @@ spring:
     name: challenge-softteck
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
     hikari:
       maximum-pool-size: 3
@@ -24,16 +24,25 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope:
-              - openid
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+  spring:
+    security:
+      oauth2:
+        client:
+          registration:
+            google:
+              client-id: ${GOOGLE_CLIENT_ID}
+              client-secret: ${GOOGLE_CLIENT_SECRET}
+              redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        resourceserver:
+          jwt:
+            public-key-location: classpath:keys/jwt.pub
+
+google:
+  accepted-client-ids:
+    - 326016549814-0ra7e82555s4fis8l3u16u1h0u9vsp89.apps.googleusercontent.com
+    - 326016549814-ge7kifevf5504d0pgpvpvq6o5pisnnlf.apps.googleusercontent.com
+    - 326016549814-nr0ltdvl8q9sjkv9bgbjkil5s6ad8hg5.apps.googleusercontent.com
+    - 326016549814-0pgodn7bp2qcun8ve0puapufcnv8na34.apps.googleusercontent.com
 
 server:
   port: 8080
