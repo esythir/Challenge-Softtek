@@ -356,4 +356,50 @@ public class CheckinService {
         return new WorkloadAlertsDTO(list);
     }
 
+    @Transactional(readOnly = true)
+    public ClimateDiagnosisDTO climateDiagnosis(byte[] uuid) {
+        LocalDateTime last = respRepo.lastAnsweredByCode("CLIMATE", uuid);
+        if (last == null) {
+            return new ClimateDiagnosisDTO("", List.of());
+        }
+
+        LocalDate startMonth = last.toLocalDate().withDayOfMonth(1);
+        LocalDateTime from  = startMonth.atStartOfDay();
+        LocalDateTime to    = startMonth.plusMonths(1).atStartOfDay();
+
+        var responses = respRepo.findByFormCodeBetween(
+                "CLIMATE", uuid, from, to
+        );
+
+        Map<String, List<Integer>> dimsMap = Map.of(
+                "relacionamento",  List.of(1, 2, 3, 4),
+                "comunicacao",     List.of(5, 6, 7, 8),
+                "lideranca",       List.of(9,10,11,12,13,14,15)
+        );
+
+        List<DimensionScoreDTO> dims = dimsMap.entrySet().stream()
+                .map(e -> {
+                    String name = e.getKey();
+                    List<Integer> ords = e.getValue();
+                    double avg = responses.stream()
+                            .flatMap(fr -> fr.getAnswers().stream())
+                            .filter(a -> ords.contains(a.getQuestion().getOrdinal()))
+                            .mapToInt(a -> a.getOption().getOrdinal())
+                            .average().orElse(0);
+                    double score = Math.round(avg * 10) / 10.0;
+                    String status;
+                    if (score < 3)      status = "Alerta";
+                    else if (score < 4) status = "Atenção";
+                    else                status = "Saudável";
+                    return new DimensionScoreDTO(name, score, status);
+                })
+                .toList();
+
+        String period = String.format("%04d-%02d",
+                startMonth.getYear(), startMonth.getMonthValue());
+
+        return new ClimateDiagnosisDTO(period, dims);
+    }
+
+
 }

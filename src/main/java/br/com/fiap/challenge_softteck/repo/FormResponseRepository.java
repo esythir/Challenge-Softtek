@@ -59,4 +59,13 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, Long
             @Param("formId") Long formId,
             @Param("uuid")   byte[] uuid
     );
+
+    @Query("SELECT MAX(fr.answeredAt) " +
+            "  FROM FormResponse fr " +
+            " WHERE fr.form.code = :code " +
+            "   AND fr.userUuid    = :uuid")
+    LocalDateTime lastAnsweredByCode(
+            @Param("code") String code,
+            @Param("uuid") byte[] uuid
+    );
 }
