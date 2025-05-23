@@ -28,7 +28,7 @@ public class FormController {
     }
 
     @GetMapping("/{id}")
-    public FormDetailDTO detail(@PathVariable Long id) {
+    public FormDetailDTO detail(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return formService.getDetail(id);
     }
 

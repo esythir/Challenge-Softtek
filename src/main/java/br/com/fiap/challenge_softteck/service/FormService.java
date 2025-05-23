@@ -2,10 +2,12 @@ package br.com.fiap.challenge_softteck.service;
 
 import br.com.fiap.challenge_softteck.dto.*;
 import br.com.fiap.challenge_softteck.repo.*;
-import br.com.fiap.challenge_softteck.utils.UuidUtil;
 import br.com.fiap.challenge_softteck.mapper.Mapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.*;
 import java.util.*;
 
@@ -54,7 +56,12 @@ public class FormService {
         return out;
     }
 
+    @Transactional(readOnly = true)
     public FormDetailDTO getDetail(Long id) {
-        return formRepo.findById(id).map(Mapper::toDetail).orElseThrow();
+        return formRepo.findById(id)
+                .map(Mapper::toDetail)
+                .orElseThrow(() -> new EntityNotFoundException("Form not found"));
     }
+
+
 }
