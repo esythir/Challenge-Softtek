@@ -1,6 +1,7 @@
 package br.com.fiap.challenge_softteck.service;
 
 import br.com.fiap.challenge_softteck.dto.CheckinItemDTO;
+import br.com.fiap.challenge_softteck.dto.WeeklyCheckinDTO;
 import br.com.fiap.challenge_softteck.repo.FormResponseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -8,8 +9,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.*;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
+import java.util.stream.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,5 +36,32 @@ public class CheckinService {
                                 ))
                                 .toList()
                 ));
+    }
+
+    @Transactional(readOnly = true)
+    public WeeklyCheckinDTO weeklySummary(byte[] uuid) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate domingo = hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+        LocalDate sabado  = domingo.plusDays(6);
+
+        LocalDateTime inicio = domingo.atStartOfDay();
+        LocalDateTime fim    = sabado.plusDays(1).atStartOfDay(); // exclusivo
+
+        List<LocalDate> respondedDates = respRepo
+                .findCheckinsBetween(uuid, inicio, fim)
+                .stream()
+                .map(fr -> fr.getAnsweredAt().toLocalDate())
+                .distinct()
+                .toList();
+
+        List<WeeklyCheckinDTO.DailyCheckinDTO> dias = IntStream.rangeClosed(0, 6)
+                .mapToObj(i -> {
+                    LocalDate dia = domingo.plusDays(i);
+                    boolean exists = respondedDates.contains(dia);
+                    return new WeeklyCheckinDTO.DailyCheckinDTO(dia, exists);
+                })
+                .toList();
+
+        return new WeeklyCheckinDTO(domingo, sabado, dias);
     }
 }

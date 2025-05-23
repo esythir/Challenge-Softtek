@@ -1,16 +1,44 @@
 package br.com.fiap.challenge_softteck.repo;
 
 import br.com.fiap.challenge_softteck.domain.FormResponse;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
-import java.time.*;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
+import java.util.List;
 
-public interface FormResponseRepository extends JpaRepository<FormResponse,Long> {
+public interface FormResponseRepository extends JpaRepository<FormResponse, Long> {
 
-    @Query("SELECT fr FROM FormResponse fr WHERE fr.form.code = 'CHECKIN' AND fr.userUuid = :uuid AND (:from IS NULL OR fr.answeredAt >= :from) AND (:to IS NULL OR fr.answeredAt <= :to)")
-    Page<FormResponse> listCheckins(byte[] uuid, LocalDateTime from, LocalDateTime to, Pageable page);
+    @Query("SELECT fr FROM FormResponse fr " +
+            "WHERE fr.form.code = 'CHECKIN' " +
+            "  AND fr.userUuid = :uuid " +
+            "  AND (:from IS NULL OR fr.answeredAt >= :from) " +
+            "  AND (:to   IS NULL OR fr.answeredAt <= :to)")
+    Page<FormResponse> listCheckins(
+            @Param("uuid") byte[] uuid,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to,
+            Pageable page
+    );
 
-    @Query("SELECT MAX(fr.answeredAt) FROM FormResponse fr WHERE fr.form.id = :formId AND fr.userUuid = :uuid")
-    LocalDateTime lastAnswered(Long formId, byte[] uuid);
+    @Query("SELECT MAX(fr.answeredAt) " +
+            "FROM FormResponse fr " +
+            "WHERE fr.form.id = :formId " +
+            "  AND fr.userUuid = :uuid")
+    LocalDateTime lastAnswered(
+            @Param("formId") Long formId,
+            @Param("uuid")   byte[] uuid
+    );
 
+    @Query("SELECT fr FROM FormResponse fr " +
+            "WHERE fr.form.code = 'CHECKIN' " +
+            "  AND fr.userUuid = :uuid " +
+            "  AND fr.answeredAt >= :from " +
+            "  AND fr.answeredAt <  :to")
+    List<FormResponse> findCheckinsBetween(
+            @Param("uuid") byte[] uuid,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to
+    );
 }
