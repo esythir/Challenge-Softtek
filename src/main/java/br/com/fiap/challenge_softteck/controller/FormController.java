@@ -5,6 +5,7 @@ import br.com.fiap.challenge_softteck.service.*;
 import br.com.fiap.challenge_softteck.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,17 +22,10 @@ public class FormController {
     @GetMapping
     public List<FormListDTO> list(@RequestHeader("Authorization") String auth,
                                   @RequestParam(required=false) String type,
-                                  Jwt jwt) {
+                                  @AuthenticationPrincipal Jwt jwt) {
         byte[] uuid = UuidUtil.uuidToBytes(UUID.fromString(jwt.getClaimAsString("uid")));
         return formService.listAvailable(uuid, type);
     }
-
-//    @GetMapping
-//    public List<FormListDTO> list(@RequestParam(required=false) String type) {
-//        byte[] dummyUuid = new byte[16];
-//        return formService.listAvailable(dummyUuid, type);
-//    }
-
 
     @GetMapping("/{id}")
     public FormDetailDTO detail(@PathVariable Long id) {
@@ -41,7 +35,7 @@ public class FormController {
     @PostMapping("/{id}/responses")
     public ResponseEntity<Void> submit(@PathVariable Long id,
                                        @RequestBody SubmitResponseDTO body,
-                                       Jwt jwt) {
+                                       @AuthenticationPrincipal Jwt jwt) {
         byte[] uuid = UuidUtil.uuidToBytes(UUID.fromString(jwt.getClaimAsString("uid")));
         Long respId = responseService.saveResponse(id, uuid, body);
         return ResponseEntity.created(URI.create("/forms/"+id+"/responses/"+respId)).build();
