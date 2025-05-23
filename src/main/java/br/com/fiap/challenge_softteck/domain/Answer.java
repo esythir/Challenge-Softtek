@@ -11,8 +11,18 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SequenceGenerator(
+        name = "answer_seq",
+        sequenceName = "SQ_ANSWER",
+        allocationSize = 1
+)
 public class Answer {
-    @Id @Column(name = "ID")
+    @Id
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "answer_seq"
+    )
+    @Column(name = "ID")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

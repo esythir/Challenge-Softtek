@@ -11,8 +11,18 @@ import java.util.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SequenceGenerator(
+        name = "form_response_seq",
+        sequenceName = "SQ_FORM_RESPONSE",
+        allocationSize = 1
+)
 public class FormResponse {
-    @Id @Column(name = "ID")
+
+    @Id
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "form_response_seq"
+    )
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
