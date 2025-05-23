@@ -314,4 +314,46 @@ public class CheckinService {
         else if (percent <= 66)  return "Moderado";
         else                      return "Alto";
     }
+
+    @Transactional(readOnly = true)
+    public WorkloadAlertsDTO workloadAlerts(byte[] uuid, Integer monthsParam) {
+        int months = monthsParam != null ? monthsParam : 3;
+        LocalDate today = LocalDate.now();
+
+        List<WorkloadAlertMonthDTO> list = IntStream.rangeClosed(1, months)
+                .mapToObj(i -> {
+                    LocalDate startMonth = today.minusMonths(months - i).withDayOfMonth(1);
+                    LocalDateTime startAt = startMonth.atStartOfDay();
+                    LocalDateTime endAt   = startMonth.plusMonths(1).atStartOfDay();
+
+                    var responses = respRepo.findByFormCodeBetween(
+                            "SELF_ASSESSMENT", uuid, startAt, endAt
+                    );
+
+                    double avgWorkload = responses.stream()
+                            .flatMap(fr -> fr.getAnswers().stream())
+                            .filter(a -> a.getQuestion().getOrdinal() == 1)
+                            .mapToInt(a -> a.getOption().getOrdinal())
+                            .average().orElse(0);
+
+                    long alertCount = responses.stream()
+                            .filter(fr -> fr.getAnswers().stream()
+                                    .filter(a -> a.getQuestion().getOrdinal() != 1)
+                                    .anyMatch(a -> a.getOption().getOrdinal() >= 4))
+                            .count();
+
+                    String period = String.format("%04d-%02d",
+                            startMonth.getYear(), startMonth.getMonthValue());
+
+                    return new WorkloadAlertMonthDTO(
+                            period,
+                            Math.round(avgWorkload * 10) / 10.0,
+                            alertCount
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new WorkloadAlertsDTO(list);
+    }
+
 }

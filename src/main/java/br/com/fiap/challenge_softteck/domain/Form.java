@@ -2,7 +2,6 @@ package br.com.fiap.challenge_softteck.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.*;
 
 @Entity
@@ -40,5 +39,4 @@ public class Form {
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "form")
     private List<Question> questions = new ArrayList<>();
-
 }
