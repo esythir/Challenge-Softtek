@@ -3,7 +3,6 @@ package br.com.fiap.challenge_softteck.service;
 import br.com.fiap.challenge_softteck.domain.Answer;
 import br.com.fiap.challenge_softteck.domain.FormResponse;
 import br.com.fiap.challenge_softteck.domain.Option;
-import br.com.fiap.challenge_softteck.domain.Question;
 import br.com.fiap.challenge_softteck.dto.*;
 import br.com.fiap.challenge_softteck.repo.FormResponseRepository;
 import br.com.fiap.challenge_softteck.repo.QuestionRepository;
@@ -18,11 +17,16 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.function.IntFunction;
-import java.util.stream.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
 public class CheckinService {
+
+    private static final String SELF_ASSESS_CODE = "SELF_ASSESS";
+    private static final String CHECKIN_CODE     = "CHECKIN";
+    private static final String CLIMATE_CODE     = "CLIMATE";
 
     private final FormResponseRepository respRepo;
     private final QuestionRepository questionRepo;
@@ -79,11 +83,7 @@ public class CheckinService {
         LocalDate start = LocalDate.of(y, m, 1);
         LocalDate end   = start.plusMonths(1);
 
-        var responses = respRepo.findCheckinsBetween(
-                uuid,
-                start.atStartOfDay(),
-                end.atStartOfDay()
-        );
+        var responses = respRepo.findCheckinsBetween(uuid, start.atStartOfDay(), end.atStartOfDay());
 
         Map<DayOfWeek, Long> countByDow = responses.stream()
                 .map(r -> r.getAnsweredAt().toLocalDate().getDayOfWeek())
@@ -175,8 +175,7 @@ public class CheckinService {
         LocalDate start = LocalDate.of(y, m, 1);
         LocalDate end   = start.plusMonths(1);
 
-        var checkins = respRepo.findCheckinsBetween(uuid,
-                start.atStartOfDay(), end.atStartOfDay());
+        var checkins = respRepo.findCheckinsBetween(uuid, start.atStartOfDay(), end.atStartOfDay());
         long total = checkins.size();
 
         IntFunction<List<PredominantOptionCountDTO>> topByOrdinal = ord -> {
@@ -196,8 +195,8 @@ public class CheckinService {
                     .toList();
         };
 
-        List<PredominantOptionCountDTO> emojiTop = topByOrdinal.apply(1);
-        List<PredominantOptionCountDTO> sentiTop = topByOrdinal.apply(2);
+        var emojiTop = topByOrdinal.apply(1);
+        var sentiTop = topByOrdinal.apply(2);
 
         double avgCurrSent = checkins.stream()
                 .flatMap(fr -> fr.getAnswers().stream())
@@ -207,9 +206,7 @@ public class CheckinService {
 
         LocalDate prevStart = start.minusMonths(1);
         LocalDate prevEnd   = start;
-        var prevCheckins = respRepo.findCheckinsBetween(uuid,
-                prevStart.atStartOfDay(), prevEnd.atStartOfDay());
-
+        var prevCheckins = respRepo.findCheckinsBetween(uuid, prevStart.atStartOfDay(), prevEnd.atStartOfDay());
         double avgPrevSent = prevCheckins.stream()
                 .flatMap(fr -> fr.getAnswers().stream())
                 .filter(a -> a.getQuestion().getOrdinal() == 2)
@@ -220,9 +217,9 @@ public class CheckinService {
                 : avgCurrSent < avgPrevSent ? "down"
                 : "same";
 
-        var currSA = respRepo.findByFormCodeBetween("SELF_ASSESSMENT",
+        var currSA = respRepo.findByFormCodeBetween(SELF_ASSESS_CODE,
                 uuid, start.atStartOfDay(), end.atStartOfDay());
-        var prevSA = respRepo.findByFormCodeBetween("SELF_ASSESSMENT",
+        var prevSA = respRepo.findByFormCodeBetween(SELF_ASSESS_CODE,
                 uuid, prevStart.atStartOfDay(), prevEnd.atStartOfDay());
 
         double avgWorkCurr = currSA.stream()
@@ -255,79 +252,18 @@ public class CheckinService {
     }
 
     @Transactional(readOnly = true)
-    public MoodDistributionDTO moodDistribution(byte[] uuid, Integer year, Integer month) {
-        LocalDate today = LocalDate.now();
-        int y = (year  != null ? year  : today.getYear());
-        int m = (month != null ? month : today.getMonthValue());
-        LocalDate start = LocalDate.of(y, m, 1);
-        LocalDateTime startAt = start.atStartOfDay();
-        LocalDateTime endAt   = start.plusMonths(1).atStartOfDay();
-
-        List<FormResponse> responses = respRepo.findCheckinsBetween(uuid, startAt, endAt);
-        long totalResponses = responses.size();
-
-        List<Integer> ordinals = List.of(1, 2);
-        List<Question> perguntas = questionRepo.findByFormCodeAndOrdinalIn("CHECKIN", ordinals);
-
-        var questionDTOs = perguntas.stream()
-                .sorted(Comparator.comparingInt(Question::getOrdinal))
-                .map(q -> {
-                    int ord = q.getOrdinal();
-                    String text = q.getText();
-
-                    Map<Long, Long> freq = responses.stream()
-                            .flatMap(fr -> fr.getAnswers().stream())
-                            .filter(a -> a.getQuestion().getOrdinal() == ord)
-                            .filter(a -> a.getOption() != null)
-                            .collect(Collectors.groupingBy(
-                                    a -> a.getOption().getId(),
-                                    Collectors.counting()
-                            ));
-
-                    List<OptionDistributionDTO> opts = q.getOptions().stream()
-                            .sorted(Comparator.comparing(o -> o.getOrdinal()))
-                            .map(o -> {
-                                long cnt = freq.getOrDefault(o.getId(), 0L);
-                                double pct = totalResponses > 0
-                                        ? Math.round((cnt * 100.0 / totalResponses) * 10) / 10.0
-                                        : 0.0;
-                                return new OptionDistributionDTO(
-                                        o.getId(),
-                                        o.getLabel(),
-                                        cnt,
-                                        pct,
-                                        mapLevel(pct)
-                                );
-                            })
-                            .collect(Collectors.toList());
-
-                    return new QuestionDistributionDTO(ord, text, totalResponses, opts);
-                })
-                .collect(Collectors.toList());
-
-        String period = String.format("%04d-%02d", y, m);
-        return new MoodDistributionDTO(period, questionDTOs);
-    }
-
-    private String mapLevel(double percent) {
-        if (percent <= 33)       return "Baixo";
-        else if (percent <= 66)  return "Moderado";
-        else                      return "Alto";
-    }
-
-    @Transactional(readOnly = true)
     public WorkloadAlertsDTO workloadAlerts(byte[] uuid, Integer monthsParam) {
         int months = monthsParam != null ? monthsParam : 3;
         LocalDate today = LocalDate.now();
 
-        List<WorkloadAlertMonthDTO> list = IntStream.rangeClosed(1, months)
+        var list = IntStream.rangeClosed(1, months)
                 .mapToObj(i -> {
                     LocalDate startMonth = today.minusMonths(months - i).withDayOfMonth(1);
                     LocalDateTime startAt = startMonth.atStartOfDay();
                     LocalDateTime endAt   = startMonth.plusMonths(1).atStartOfDay();
 
                     var responses = respRepo.findByFormCodeBetween(
-                            "SELF_ASSESSMENT", uuid, startAt, endAt
+                            SELF_ASSESS_CODE, uuid, startAt, endAt
                     );
 
                     double avgWorkload = responses.stream()
@@ -351,36 +287,34 @@ public class CheckinService {
                             alertCount
                     );
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return new WorkloadAlertsDTO(list);
     }
 
     @Transactional(readOnly = true)
     public ClimateDiagnosisDTO climateDiagnosis(byte[] uuid) {
-        LocalDateTime last = respRepo.lastAnsweredByCode("CLIMATE", uuid);
+        LocalDateTime last = respRepo.lastAnsweredByCode(CLIMATE_CODE, uuid);
         if (last == null) {
             return new ClimateDiagnosisDTO("", List.of());
         }
 
         LocalDate startMonth = last.toLocalDate().withDayOfMonth(1);
-        LocalDateTime from  = startMonth.atStartOfDay();
-        LocalDateTime to    = startMonth.plusMonths(1).atStartOfDay();
+        LocalDateTime from = startMonth.atStartOfDay();
+        LocalDateTime to   = startMonth.plusMonths(1).atStartOfDay();
 
-        var responses = respRepo.findByFormCodeBetween(
-                "CLIMATE", uuid, from, to
-        );
+        var responses = respRepo.findByFormCodeBetween(CLIMATE_CODE, uuid, from, to);
 
         Map<String, List<Integer>> dimsMap = Map.of(
-                "relacionamento",  List.of(1, 2, 3, 4),
-                "comunicacao",     List.of(5, 6, 7, 8),
-                "lideranca",       List.of(9,10,11,12,13,14,15)
+                "relacionamento", List.of(1, 2, 3, 4),
+                "comunicacao",    List.of(5, 6, 7, 8),
+                "lideranca",      List.of(9,10,11,12,13,14,15)
         );
 
-        List<DimensionScoreDTO> dims = dimsMap.entrySet().stream()
+        var dims = dimsMap.entrySet().stream()
                 .map(e -> {
                     String name = e.getKey();
-                    List<Integer> ords = e.getValue();
+                    var ords = e.getValue();
                     double avg = responses.stream()
                             .flatMap(fr -> fr.getAnswers().stream())
                             .filter(a -> ords.contains(a.getQuestion().getOrdinal()))
@@ -400,6 +334,4 @@ public class CheckinService {
 
         return new ClimateDiagnosisDTO(period, dims);
     }
-
-
 }
