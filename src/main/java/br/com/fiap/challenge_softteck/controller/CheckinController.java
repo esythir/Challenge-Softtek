@@ -1,6 +1,7 @@
 package br.com.fiap.challenge_softteck.controller;
 
 import br.com.fiap.challenge_softteck.dto.MonthlyCheckinSummaryDTO;
+import br.com.fiap.challenge_softteck.dto.MoodDistributionDTO;
 import br.com.fiap.challenge_softteck.dto.WeeklyCheckinDTO;
 import br.com.fiap.challenge_softteck.service.CheckinService;
 import br.com.fiap.challenge_softteck.utils.UuidUtil;
@@ -49,5 +50,17 @@ public class CheckinController {
     ) {
         byte[] uuid = UuidUtil.uuidToBytes(UUID.fromString(jwt.getClaimAsString("uid")));
         return service.monthlySummary(uuid, year, month);
+    }
+
+    @GetMapping("/mood-distribution")
+    public MoodDistributionDTO getMoodDistribution(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        byte[] uuid = UuidUtil.uuidToBytes(
+                UUID.fromString(jwt.getClaimAsString("uid"))
+        );
+        return service.moodDistribution(uuid, year, month);
     }
 }

@@ -1,18 +1,12 @@
 package br.com.fiap.challenge_softteck.service;
 
 import br.com.fiap.challenge_softteck.domain.Answer;
+import br.com.fiap.challenge_softteck.domain.FormResponse;
 import br.com.fiap.challenge_softteck.domain.Option;
-import br.com.fiap.challenge_softteck.dto.CheckinItemDTO;
-import br.com.fiap.challenge_softteck.dto.DailySummaryDTO;
-import br.com.fiap.challenge_softteck.dto.DailyTotalDTO;
-import br.com.fiap.challenge_softteck.dto.MonthlyCheckinSummaryDTO;
-import br.com.fiap.challenge_softteck.dto.MonthlyCheckinTrendDTO;
-import br.com.fiap.challenge_softteck.dto.PredominantOptionCountDTO;
-import br.com.fiap.challenge_softteck.dto.PredominantOptionDTO;
-import br.com.fiap.challenge_softteck.dto.WeeklyCheckinDTO;
-import br.com.fiap.challenge_softteck.dto.WeeklyMoodDTO;
-import br.com.fiap.challenge_softteck.dto.WorkloadDTO;
+import br.com.fiap.challenge_softteck.domain.Question;
+import br.com.fiap.challenge_softteck.dto.*;
 import br.com.fiap.challenge_softteck.repo.FormResponseRepository;
+import br.com.fiap.challenge_softteck.repo.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +25,7 @@ import java.util.stream.*;
 public class CheckinService {
 
     private final FormResponseRepository respRepo;
+    private final QuestionRepository questionRepo;
 
     @Transactional(readOnly = true)
     public Page<CheckinItemDTO> list(byte[] uuid, LocalDate from, LocalDate to, Pageable page) {
@@ -115,7 +110,7 @@ public class CheckinService {
 
         DailySummaryDTO dailySummary = new DailySummaryDTO(totals, peaks, lows);
 
-        Map<LocalDate, List<br.com.fiap.challenge_softteck.domain.FormResponse>> byWeek = responses.stream()
+        Map<LocalDate, List<FormResponse>> byWeek = responses.stream()
                 .collect(Collectors.groupingBy(fr ->
                         fr.getAnsweredAt().toLocalDate()
                                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
@@ -259,4 +254,64 @@ public class CheckinService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public MoodDistributionDTO moodDistribution(byte[] uuid, Integer year, Integer month) {
+        LocalDate today = LocalDate.now();
+        int y = (year  != null ? year  : today.getYear());
+        int m = (month != null ? month : today.getMonthValue());
+        LocalDate start = LocalDate.of(y, m, 1);
+        LocalDateTime startAt = start.atStartOfDay();
+        LocalDateTime endAt   = start.plusMonths(1).atStartOfDay();
+
+        List<FormResponse> responses = respRepo.findCheckinsBetween(uuid, startAt, endAt);
+        long totalResponses = responses.size();
+
+        List<Integer> ordinals = List.of(1, 2);
+        List<Question> perguntas = questionRepo.findByFormCodeAndOrdinalIn("CHECKIN", ordinals);
+
+        var questionDTOs = perguntas.stream()
+                .sorted(Comparator.comparingInt(Question::getOrdinal))
+                .map(q -> {
+                    int ord = q.getOrdinal();
+                    String text = q.getText();
+
+                    Map<Long, Long> freq = responses.stream()
+                            .flatMap(fr -> fr.getAnswers().stream())
+                            .filter(a -> a.getQuestion().getOrdinal() == ord)
+                            .filter(a -> a.getOption() != null)
+                            .collect(Collectors.groupingBy(
+                                    a -> a.getOption().getId(),
+                                    Collectors.counting()
+                            ));
+
+                    List<OptionDistributionDTO> opts = q.getOptions().stream()
+                            .sorted(Comparator.comparing(o -> o.getOrdinal()))
+                            .map(o -> {
+                                long cnt = freq.getOrDefault(o.getId(), 0L);
+                                double pct = totalResponses > 0
+                                        ? Math.round((cnt * 100.0 / totalResponses) * 10) / 10.0
+                                        : 0.0;
+                                return new OptionDistributionDTO(
+                                        o.getId(),
+                                        o.getLabel(),
+                                        cnt,
+                                        pct,
+                                        mapLevel(pct)
+                                );
+                            })
+                            .collect(Collectors.toList());
+
+                    return new QuestionDistributionDTO(ord, text, totalResponses, opts);
+                })
+                .collect(Collectors.toList());
+
+        String period = String.format("%04d-%02d", y, m);
+        return new MoodDistributionDTO(period, questionDTOs);
+    }
+
+    private String mapLevel(double percent) {
+        if (percent <= 33)       return "Baixo";
+        else if (percent <= 66)  return "Moderado";
+        else                      return "Alto";
+    }
 }
