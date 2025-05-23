@@ -4,6 +4,8 @@ import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -12,8 +14,7 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 
 @Configuration
@@ -22,8 +23,13 @@ public class SecurityConfig {
 
     @Bean
     public JwtEncoder jwtEncoder() throws IOException {
-        String privPem = Files.readString(Path.of("src/main/resources/keys/jwt.key"));
-        String pubPem  = Files.readString(Path.of("src/main/resources/keys/jwt.pub"));
+        // Load PEM files from classpath
+        Resource privResource = new ClassPathResource("keys/jwt.key");
+        Resource pubResource  = new ClassPathResource("keys/jwt.pub");
+
+        String privPem = new String(privResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        String pubPem  = new String(pubResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
         RSAKey rsa = new RSAKey.Builder((RSAPublicKey) PemUtils.parsePublicKey(pubPem))
                 .privateKey(PemUtils.parsePrivateKey(privPem))
                 .keyID("softtek-jwt")
@@ -33,7 +39,8 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() throws Exception {
-        String pubPem = Files.readString(Path.of("src/main/resources/keys/jwt.pub"));
+        Resource pubResource  = new ClassPathResource("keys/jwt.pub");
+        String pubPem = new String(pubResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         RSAPublicKey publicKey = (RSAPublicKey) PemUtils.parsePublicKey(pubPem);
 
         return NimbusJwtDecoder.withPublicKey(publicKey).build();
@@ -58,5 +65,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
 }
