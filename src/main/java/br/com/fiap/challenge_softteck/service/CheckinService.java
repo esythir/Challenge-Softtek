@@ -3,6 +3,7 @@ package br.com.fiap.challenge_softteck.service;
 import br.com.fiap.challenge_softteck.domain.Answer;
 import br.com.fiap.challenge_softteck.domain.FormResponse;
 import br.com.fiap.challenge_softteck.domain.Option;
+import br.com.fiap.challenge_softteck.domain.Question;
 import br.com.fiap.challenge_softteck.dto.*;
 import br.com.fiap.challenge_softteck.repo.FormResponseRepository;
 import br.com.fiap.challenge_softteck.repo.QuestionRepository;
@@ -17,8 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.function.IntFunction;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.stream.*;
 
 @Service
 @RequiredArgsConstructor
@@ -195,8 +195,8 @@ public class CheckinService {
                     .toList();
         };
 
-        var emojiTop = topByOrdinal.apply(1);
-        var sentiTop = topByOrdinal.apply(2);
+        List<PredominantOptionCountDTO> emojiTop = topByOrdinal.apply(1);
+        List<PredominantOptionCountDTO> sentiTop = topByOrdinal.apply(2);
 
         double avgCurrSent = checkins.stream()
                 .flatMap(fr -> fr.getAnswers().stream())
@@ -207,6 +207,7 @@ public class CheckinService {
         LocalDate prevStart = start.minusMonths(1);
         LocalDate prevEnd   = start;
         var prevCheckins = respRepo.findCheckinsBetween(uuid, prevStart.atStartOfDay(), prevEnd.atStartOfDay());
+
         double avgPrevSent = prevCheckins.stream()
                 .flatMap(fr -> fr.getAnswers().stream())
                 .filter(a -> a.getQuestion().getOrdinal() == 2)
@@ -256,15 +257,13 @@ public class CheckinService {
         int months = monthsParam != null ? monthsParam : 3;
         LocalDate today = LocalDate.now();
 
-        var list = IntStream.rangeClosed(1, months)
+        List<WorkloadAlertMonthDTO> list = IntStream.rangeClosed(1, months)
                 .mapToObj(i -> {
                     LocalDate startMonth = today.minusMonths(months - i).withDayOfMonth(1);
                     LocalDateTime startAt = startMonth.atStartOfDay();
                     LocalDateTime endAt   = startMonth.plusMonths(1).atStartOfDay();
 
-                    var responses = respRepo.findByFormCodeBetween(
-                            SELF_ASSESS_CODE, uuid, startAt, endAt
-                    );
+                    var responses = respRepo.findByFormCodeBetween(SELF_ASSESS_CODE, uuid, startAt, endAt);
 
                     double avgWorkload = responses.stream()
                             .flatMap(fr -> fr.getAnswers().stream())
@@ -293,6 +292,51 @@ public class CheckinService {
     }
 
     @Transactional(readOnly = true)
+    public MoodDistributionDTO moodDistribution(byte[] uuid, Integer year, Integer month) {
+        LocalDate today = LocalDate.now();
+        int y = (year  != null ? year  : today.getYear());
+        int m = (month != null ? month : today.getMonthValue());
+        LocalDate start = LocalDate.of(y, m, 1);
+        LocalDateTime from  = start.atStartOfDay();
+        LocalDateTime to    = start.plusMonths(1).atStartOfDay();
+
+        var responses = respRepo.findCheckinsBetween(uuid, from, to);
+        long totalResponses = responses.size();
+
+        List<Integer> ordinals = List.of(1, 2);
+        List<Question> perguntas = questionRepo.findByFormCodeAndOrdinalIn(CHECKIN_CODE, ordinals);
+
+        List<QuestionDistributionDTO> questionDTOs = perguntas.stream()
+                .sorted(Comparator.comparingInt(Question::getOrdinal))
+                .map(q -> {
+                    long total = totalResponses;
+                    Map<Long, Long> freq = responses.stream()
+                            .flatMap(fr -> fr.getAnswers().stream())
+                            .filter(a -> a.getQuestion().getOrdinal() == q.getOrdinal())
+                            .filter(a -> a.getOption() != null)
+                            .collect(Collectors.groupingBy(a -> a.getOption().getId(), Collectors.counting()));
+
+                    List<OptionDistributionDTO> opts = q.getOptions().stream()
+                            .sorted(Comparator.comparing(o -> o.getOrdinal()))
+                            .map(o -> {
+                                long cnt = freq.getOrDefault(o.getId(), 0L);
+                                double pct = total > 0
+                                        ? Math.round(cnt * 1000.0 / total) / 10.0
+                                        : 0.0;
+                                String level = pct <= 33 ? "Baixo" : pct <= 66 ? "Moderado" : "Alto";
+                                return new OptionDistributionDTO(o.getId(), o.getLabel(), cnt, pct, level);
+                            })
+                            .toList();
+
+                    return new QuestionDistributionDTO(q.getOrdinal(), q.getText(), total, opts);
+                })
+                .toList();
+
+        String period = String.format("%04d-%02d", y, m);
+        return new MoodDistributionDTO(period, questionDTOs);
+    }
+
+    @Transactional(readOnly = true)
     public ClimateDiagnosisDTO climateDiagnosis(byte[] uuid) {
         LocalDateTime last = respRepo.lastAnsweredByCode(CLIMATE_CODE, uuid);
         if (last == null) {
@@ -300,8 +344,8 @@ public class CheckinService {
         }
 
         LocalDate startMonth = last.toLocalDate().withDayOfMonth(1);
-        LocalDateTime from = startMonth.atStartOfDay();
-        LocalDateTime to   = startMonth.plusMonths(1).atStartOfDay();
+        LocalDateTime from   = startMonth.atStartOfDay();
+        LocalDateTime to     = startMonth.plusMonths(1).atStartOfDay();
 
         var responses = respRepo.findByFormCodeBetween(CLIMATE_CODE, uuid, from, to);
 
@@ -311,20 +355,17 @@ public class CheckinService {
                 "lideranca",      List.of(9,10,11,12,13,14,15)
         );
 
-        var dims = dimsMap.entrySet().stream()
+        List<DimensionScoreDTO> dims = dimsMap.entrySet().stream()
                 .map(e -> {
                     String name = e.getKey();
-                    var ords = e.getValue();
+                    List<Integer> ords = e.getValue();
                     double avg = responses.stream()
                             .flatMap(fr -> fr.getAnswers().stream())
                             .filter(a -> ords.contains(a.getQuestion().getOrdinal()))
                             .mapToInt(a -> a.getOption().getOrdinal())
                             .average().orElse(0);
                     double score = Math.round(avg * 10) / 10.0;
-                    String status;
-                    if (score < 3)      status = "Alerta";
-                    else if (score < 4) status = "Atenção";
-                    else                status = "Saudável";
+                    String status = score < 3 ? "Alerta" : score < 4 ? "Atenção" : "Saudável";
                     return new DimensionScoreDTO(name, score, status);
                 })
                 .toList();
@@ -334,4 +375,5 @@ public class CheckinService {
 
         return new ClimateDiagnosisDTO(period, dims);
     }
+
 }
