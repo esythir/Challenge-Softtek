@@ -2,28 +2,6 @@ spring:
   application:
     name: challenge-softteck
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: oracle.jdbc.OracleDriver
-    hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    open-in-view: false
-    properties:
-      hibernate:
-        dialect: ""
-
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-
   security:
     oauth2:
       client:
@@ -36,6 +14,12 @@ spring:
         jwt:
           public-key-location: classpath:keys/jwt.pub
 
+# Firebase Configuration
+firebase:
+  project-id: ${FIREBASE_PROJECT_ID:challenge-softteck}
+  service-account-key: ${FIREBASE_SERVICE_ACCOUNT_KEY:firebase-service-account.json}
+
+# Google OAuth Configuration
 google:
   accepted-client-ids:
     - 326016549814-0ra7e82555s4fis8l3u16u1h0u9vsp89.apps.googleusercontent.com
@@ -43,5 +27,13 @@ google:
     - 326016549814-nr0ltdvl8q9sjkv9bgbjkil5s6ad8hg5.apps.googleusercontent.com
     - 326016549814-0pgodn7bp2qcun8ve0puapufcnv8na34.apps.googleusercontent.com
 
+# Server Configuration
 server:
   port: 8080
+
+# Logging Configuration
+logging:
+  level:
+    br.com.fiap.challenge_softteck: DEBUG
+    com.google.firebase: INFO
+    com.google.cloud.firestore: INFO
