@@ -31,7 +31,7 @@ public class FormController {
     /**
      * Lista formulários disponíveis para um usuário
      */
-    @GetMapping("/available")
+    @GetMapping
     public CompletableFuture<ResponseEntity<List<Form>>> listAvailableForms(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String type) {
