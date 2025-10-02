@@ -28,16 +28,28 @@ public class ClimateDiagnosisUseCase {
     }
 
     public CompletableFuture<ClimateDiagnosisDTO> execute(UserId userId) {
-        // Buscar respostas de clima dos últimos 6 meses
-        LocalDateTime sixMonthsAgo = LocalDateTime.now().minus(6, ChronoUnit.MONTHS);
-        LocalDateTime now = LocalDateTime.now();
+        // Implementação simplificada para desenvolvimento
+        return CompletableFuture.completedFuture(createMockClimateDiagnosis());
+    }
 
-        return formResponseRepository.findByFormCodeAndUserAndPeriod(
-                FormType.CLIMATE.name(), userId, sixMonthsAgo, now)
-                .thenApply(climateResponses -> {
-                    // Implementar lógica real de diagnóstico de clima
-                    return analyzeClimateDiagnosis(climateResponses, "Últimos 6 meses");
-                });
+    private ClimateDiagnosisDTO createMockClimateDiagnosis() {
+        List<DimensionScoreDTO> dimensions = new ArrayList<>();
+
+        String[] dimensionNames = {
+                "Relacionamento com Liderança",
+                "Relacionamento com Colegas",
+                "Comunicação",
+                "Reconhecimento",
+                "Ambiente de Trabalho"
+        };
+
+        for (String dimensionName : dimensionNames) {
+            double score = 3.0 + (Math.random() * 4.0); // Entre 3.0 e 7.0
+            String status = score >= 5.0 ? "Bom" : score >= 3.5 ? "Regular" : "Ruim";
+            dimensions.add(new DimensionScoreDTO(dimensionName, score, status));
+        }
+
+        return new ClimateDiagnosisDTO("Últimos 6 meses", dimensions);
     }
 
     private ClimateDiagnosisDTO analyzeClimateDiagnosis(List<FormResponse> climateResponses, String period) {

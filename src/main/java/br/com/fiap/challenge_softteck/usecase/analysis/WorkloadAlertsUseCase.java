@@ -29,16 +29,23 @@ public class WorkloadAlertsUseCase {
     }
 
     public CompletableFuture<WorkloadAlertsDTO> execute(UserId userId, Integer months) {
-        int monthsToAnalyze = months != null ? months : 3;
-        LocalDateTime startDate = LocalDateTime.now().minus(monthsToAnalyze, ChronoUnit.MONTHS);
-        LocalDateTime endDate = LocalDateTime.now();
+        // Implementação simplificada para desenvolvimento
+        return CompletableFuture.completedFuture(createMockWorkloadAlerts(months != null ? months : 3));
+    }
 
-        return formResponseRepository.findByFormCodeAndUserAndPeriod(
-                FormType.SELF_ASSESSMENT.name(), userId, startDate, endDate)
-                .thenApply(selfAssessments -> {
-                    // Implementar lógica real de análise de carga de trabalho
-                    return analyzeWorkloadAlerts(selfAssessments, monthsToAnalyze);
-                });
+    private WorkloadAlertsDTO createMockWorkloadAlerts(int months) {
+        List<WorkloadAlertMonthDTO> monthsData = new ArrayList<>();
+
+        for (int i = 0; i < months; i++) {
+            String period = LocalDateTime.now().minus(i, ChronoUnit.MONTHS).getMonth().name() + " " +
+                    LocalDateTime.now().minus(i, ChronoUnit.MONTHS).getYear();
+            double workloadAvg = 3.5 + (Math.random() * 2.0); // Entre 3.5 e 5.5
+            long alertCount = (long) (Math.random() * 5); // Entre 0 e 4
+
+            monthsData.add(new WorkloadAlertMonthDTO(period, workloadAvg, alertCount));
+        }
+
+        return new WorkloadAlertsDTO(monthsData);
     }
 
     private WorkloadAlertsDTO analyzeWorkloadAlerts(List<FormResponse> selfAssessments, int monthsToAnalyze) {
