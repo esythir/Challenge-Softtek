@@ -1,0 +1,21 @@
+# Configuração para ambiente de produção
+
+# Firebase habilitado para produção
+firebase:
+  enabled: true
+
+# Configurações de logging para produção
+logging:
+  level:
+    br.com.fiap.challenge_softteck: INFO
+    com.google.firebase: WARN
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Configurações do servidor
+server:
+  port: 8080
+  servlet:
+    context-path: /
