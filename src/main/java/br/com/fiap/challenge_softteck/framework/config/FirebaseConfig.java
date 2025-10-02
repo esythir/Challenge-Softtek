@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -39,21 +40,28 @@ public class FirebaseConfig {
                         .build();
 
                 FirebaseApp.initializeApp(options);
+            } catch (Exception e) {
+                // Log error but don't fail startup for development
+                System.err.println("Warning: Could not initialize Firebase: " + e.getMessage());
+                System.err.println("Application will run in development mode without Firebase");
             }
         }
     }
 
     @Bean
+    @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = false)
     public Firestore firestore() {
         return FirestoreClient.getFirestore();
     }
 
     @Bean
+    @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = false)
     public FirebaseAuth firebaseAuth() {
         return FirebaseAuth.getInstance();
     }
 
     @Bean
+    @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = false)
     public FirebaseRemoteConfig firebaseRemoteConfig() {
         return FirebaseRemoteConfig.getInstance();
     }

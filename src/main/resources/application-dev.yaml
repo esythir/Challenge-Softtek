@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: challenge-softteck-dev
+
+# Disable Firebase for development
+firebase:
+  enabled: false
+  project-id: dev-project
+  service-account-key: classpath:firebase-service-account.json
+
+# Server Configuration
+server:
+  port: 8080
+
+# Logging Configuration
+logging:
+  level:
+    br.com.fiap.challenge_softteck: DEBUG
+    com.google.firebase: WARN
+    com.google.cloud.firestore: WARN
+    root: INFO
