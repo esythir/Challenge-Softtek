@@ -9,12 +9,14 @@ import com.google.firebase.auth.FirebaseToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 /**
  * Serviço de autenticação Firebase para verificação de tokens JWT.
  */
 @Service
+@ConditionalOnBean(FirebaseAuth.class)
 public class FirebaseAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(FirebaseAuthService.class);
