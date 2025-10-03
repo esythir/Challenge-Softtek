@@ -34,7 +34,7 @@ public class DataSeederService {
         this.formRepository = formRepository;
     }
 
-    @PostConstruct
+    // @PostConstruct
     public void seedData() {
         logger.info("Iniciando seed de dados...");
 

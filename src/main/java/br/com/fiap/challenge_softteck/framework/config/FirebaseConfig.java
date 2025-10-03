@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 
 import javax.annotation.PostConstruct;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -31,19 +32,29 @@ public class FirebaseConfig {
     private String projectId;
 
     @PostConstruct
-    public void initializeFirebase() throws IOException {
+    public void initializeFirebase() {
         if (FirebaseApp.getApps().isEmpty()) {
-            try (InputStream serviceAccount = serviceAccountKey.getInputStream()) {
+            try {
+                // Tentar carregar o arquivo do classpath
+                InputStream serviceAccount = this.getClass().getClassLoader()
+                        .getResourceAsStream("firebase-service-account.json");
+
+                if (serviceAccount == null) {
+                    throw new FileNotFoundException("firebase-service-account.json not found in classpath");
+                }
+
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                         .setProjectId(projectId)
                         .build();
 
                 FirebaseApp.initializeApp(options);
+                System.out.println("Firebase initialized successfully for project: " + projectId);
             } catch (Exception e) {
                 // Log error but don't fail startup for development
                 System.err.println("Warning: Could not initialize Firebase: " + e.getMessage());
                 System.err.println("Application will run in development mode without Firebase");
+                // Não falhar a inicialização - apenas logar o erro
             }
         }
     }

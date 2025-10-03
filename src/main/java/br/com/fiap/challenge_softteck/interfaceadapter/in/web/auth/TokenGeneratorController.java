@@ -21,12 +21,11 @@ import java.util.ArrayList;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 @Tag(name = "Token Generator", description = "Geração de tokens JWT reais")
-@ConditionalOnBean(FirebaseAuth.class)
 public class TokenGeneratorController {
 
     private final FirebaseAuth firebaseAuth;
 
-    @Autowired
+    @Autowired(required = false)
     public TokenGeneratorController(FirebaseAuth firebaseAuth) {
         this.firebaseAuth = firebaseAuth;
     }
@@ -34,6 +33,12 @@ public class TokenGeneratorController {
     @PostMapping("/generate-token")
     @Operation(summary = "Gerar JWT real", description = "Gera um JWT real do Firebase para um usuário")
     public ResponseEntity<Map<String, Object>> generateToken(@RequestParam String uid) {
+        if (firebaseAuth == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Firebase Auth não está disponível. Verifique a configuração do Firebase."));
+        }
+
         try {
             // Verificar se o usuário existe
             UserRecord userRecord = firebaseAuth.getUser(uid);
@@ -60,6 +65,12 @@ public class TokenGeneratorController {
     @GetMapping("/list-users")
     @Operation(summary = "Listar usuários", description = "Lista usuários cadastrados no Firebase")
     public ResponseEntity<Map<String, Object>> listUsers() {
+        if (firebaseAuth == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Firebase Auth não está disponível. Verifique a configuração do Firebase."));
+        }
+
         try {
             // Listar usuários (limitado a 10 para exemplo)
             var listUsersResult = firebaseAuth.listUsers(null);

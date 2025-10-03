@@ -32,7 +32,7 @@ public class ResponseSeederService {
                 this.formResponseRepository = formResponseRepository;
         }
 
-        @PostConstruct
+        // @PostConstruct
         public void seedResponses() {
                 logger.info("Iniciando seed de respostas...");
 
