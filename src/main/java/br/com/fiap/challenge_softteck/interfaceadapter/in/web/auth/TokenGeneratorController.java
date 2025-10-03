@@ -21,11 +21,12 @@ import java.util.ArrayList;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 @Tag(name = "Token Generator", description = "Geração de tokens JWT reais")
+@ConditionalOnBean(FirebaseAuth.class)
 public class TokenGeneratorController {
 
     private final FirebaseAuth firebaseAuth;
 
-    @Autowired(required = false)
+    @Autowired
     public TokenGeneratorController(FirebaseAuth firebaseAuth) {
         this.firebaseAuth = firebaseAuth;
     }
@@ -33,12 +34,6 @@ public class TokenGeneratorController {
     @PostMapping("/generate-token")
     @Operation(summary = "Gerar JWT real", description = "Gera um JWT real do Firebase para um usuário")
     public ResponseEntity<Map<String, Object>> generateToken(@RequestParam String uid) {
-        if (firebaseAuth == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", "Firebase Auth não está disponível. Verifique a configuração do Firebase."));
-        }
-
         try {
             // Verificar se o usuário existe
             UserRecord userRecord = firebaseAuth.getUser(uid);
@@ -62,15 +57,9 @@ public class TokenGeneratorController {
         }
     }
 
-    @GetMapping("/list-users")
+    @GetMapping("/users")
     @Operation(summary = "Listar usuários", description = "Lista usuários cadastrados no Firebase")
     public ResponseEntity<Map<String, Object>> listUsers() {
-        if (firebaseAuth == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", "Firebase Auth não está disponível. Verifique a configuração do Firebase."));
-        }
-
         try {
             // Listar usuários (limitado a 10 para exemplo)
             var listUsersResult = firebaseAuth.listUsers(null);
@@ -92,6 +81,22 @@ public class TokenGeneratorController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "error", "Erro ao listar usuários: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/test-auth")
+    @Operation(summary = "Testar autenticação", description = "Testa se o FirebaseAuthService está funcionando")
+    public ResponseEntity<Map<String, Object>> testAuth(@RequestHeader("Authorization") String authHeader) {
+        try {
+            // Testar se o FirebaseAuthService está disponível
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "FirebaseAuthService está disponível",
+                    "authHeader", authHeader != null ? "Presente" : "Ausente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Erro no teste de auth: " + e.getMessage()));
         }
     }
 }

@@ -185,6 +185,15 @@ public class CheckinController {
     }
 
     /**
+     * Alias para compatibilizar com /api/checkins/monthly
+     */
+    @GetMapping("/monthly")
+    public CompletableFuture<ResponseEntity<MonthlyCheckinSummaryDTO>> monthly(
+            @RequestHeader("Authorization") String authHeader) {
+        return monthlySummary(null, null, authHeader);
+    }
+
+    /**
      * Distribuição de humor
      */
     @GetMapping("/mood-distribution")
@@ -232,18 +241,14 @@ public class CheckinController {
     private UserId extractUserIdFromToken(String authHeader) {
         if (firebaseAuthService != null) {
             try {
-                // Try Firebase service first
                 return firebaseAuthService.extractUserIdFromToken(authHeader);
             } catch (Exception e) {
-                // Fallback to mock service
-                logger.debug("Firebase auth failed, using mock service: {}", e.getMessage());
+                logger.debug("Firebase auth failed, falling back to mock: {}", e.getMessage());
+                // fallback apenas se falhar a verificação
                 return mockFirebaseAuthService.extractUserIdFromToken(authHeader);
             }
-        } else {
-            // Use mock service directly
-            logger.debug("Firebase service not available, using mock service");
-            return mockFirebaseAuthService.extractUserIdFromToken(authHeader);
         }
+        return mockFirebaseAuthService.extractUserIdFromToken(authHeader);
     }
 
 }

@@ -28,16 +28,12 @@ public class ListAvailableFormsUseCase {
 
     public CompletableFuture<List<Form>> execute(UserId userId, FormType type) {
         return formRepository.findActiveByType(type)
-                .thenCompose(forms -> {
-                    LocalDateTime now = LocalDateTime.now();
-
-                    return CompletableFuture.allOf(
-                            forms.stream()
-                                    .map(form -> checkFormAvailability(form, userId, now))
-                                    .toArray(CompletableFuture[]::new))
-                            .thenApply(v -> forms.stream()
-                                    .filter(form -> isFormAvailable(form, userId, now))
-                                    .collect(Collectors.toList()));
+                .thenApply(forms -> {
+                    // Versão simplificada - retorna todos os formulários ativos
+                    // sem verificar disponibilidade por enquanto
+                    return forms.stream()
+                            .filter(Form::isActive)
+                            .collect(Collectors.toList());
                 });
     }
 

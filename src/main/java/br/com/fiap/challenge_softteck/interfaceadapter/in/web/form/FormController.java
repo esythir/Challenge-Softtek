@@ -4,14 +4,18 @@ import br.com.fiap.challenge_softteck.domain.entity.Form;
 import br.com.fiap.challenge_softteck.domain.entity.FormResponse;
 import br.com.fiap.challenge_softteck.domain.valueobject.FormType;
 import br.com.fiap.challenge_softteck.domain.valueobject.UserId;
+import br.com.fiap.challenge_softteck.framework.auth.FirebaseAuthService;
 import br.com.fiap.challenge_softteck.usecase.form.ListAvailableFormsUseCase;
 import br.com.fiap.challenge_softteck.usecase.form.SubmitFormResponseUseCase;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import br.com.fiap.challenge_softteck.domain.exception.BusinessException;
+import br.com.fiap.challenge_softteck.domain.exception.InvalidAnswerException;
 
 @RestController
 @RequestMapping("/api/forms")
@@ -20,12 +24,14 @@ public class FormController {
 
     private final ListAvailableFormsUseCase listAvailableFormsUseCase;
     private final SubmitFormResponseUseCase submitFormResponseUseCase;
+    private final FirebaseAuthService firebaseAuthService;
 
-    @Autowired
     public FormController(ListAvailableFormsUseCase listAvailableFormsUseCase,
-            SubmitFormResponseUseCase submitFormResponseUseCase) {
+            SubmitFormResponseUseCase submitFormResponseUseCase,
+            FirebaseAuthService firebaseAuthService) {
         this.listAvailableFormsUseCase = listAvailableFormsUseCase;
         this.submitFormResponseUseCase = submitFormResponseUseCase;
+        this.firebaseAuthService = firebaseAuthService;
     }
 
     /**
@@ -37,7 +43,7 @@ public class FormController {
             @RequestParam(required = false) String type) {
 
         try {
-            // Extrair UserId do token (implementação simplificada)
+            // Extrair UserId do token usando serviços de auth (firebase/mock)
             UserId userId = extractUserIdFromToken(authHeader);
 
             FormType formType = type != null ? FormType.valueOf(type.toUpperCase()) : null;
@@ -62,36 +68,43 @@ public class FormController {
     public CompletableFuture<ResponseEntity<FormResponse>> submitFormResponse(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable String formCode,
-            @RequestBody List<SubmitFormResponseUseCase.AnswerData> answers) {
+            @RequestBody String body) {
 
         try {
-            // Extrair UserId do token (implementação simplificada)
             UserId userId = extractUserIdFromToken(authHeader);
 
+            // Aceitar tanto objeto único quanto array de objetos
+            String normalized = body != null && body.stripLeading().startsWith("{")
+                    ? ("[" + body + "]")
+                    : body;
+
+            ObjectMapper mapper = new ObjectMapper();
+            List<SubmitFormResponseUseCase.AnswerData> answers = mapper.readValue(normalized,
+                    new TypeReference<List<SubmitFormResponseUseCase.AnswerData>>() {
+                    });
+
             return submitFormResponseUseCase.execute(formCode, userId, answers)
-                    .thenApply(response -> ResponseEntity.ok(response))
+                    .thenApply(ResponseEntity::ok)
                     .exceptionally(throwable -> {
-                        // Em caso de erro, retorna null (será tratado pelo GlobalExceptionHandler)
+                        Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+                        if (cause instanceof BusinessException || cause instanceof InvalidAnswerException) {
+                            return ResponseEntity.badRequest().body(null);
+                        }
                         return ResponseEntity.status(500).body(null);
                     });
 
         } catch (Exception e) {
-            // Em caso de erro de validação, retorna null
             return CompletableFuture.completedFuture(ResponseEntity.badRequest().body(null));
         }
     }
 
     /**
-     * Extrai UserId do token de autorização (implementação simplificada)
-     * Em produção, isso seria feito pelo FirebaseAuthService
+     * Extrai UserId do token de autorização usando Firebase Auth
      */
     private UserId extractUserIdFromToken(String authHeader) {
-        // Implementação simplificada - em produção, usar FirebaseAuthService
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Token de autorização inválido");
+        if (firebaseAuthService == null) {
+            throw new RuntimeException("Firebase Auth Service não está disponível");
         }
-
-        // Por enquanto, retornar um UserId fixo para testes
-        return UserId.fromString("test-user-id");
+        return firebaseAuthService.extractUserIdFromToken(authHeader);
     }
 }

@@ -93,7 +93,6 @@ public class FirebaseFormResponseRepository implements FormResponseRepositoryPor
                             var answerData = new java.util.HashMap<String, Object>();
                             answerData.put("questionId", answer.getQuestionId());
 
-                            // Extrair valor do AnswerValue
                             String valueStr = switch (answer.getValue()) {
                                 case AnswerValue.OptionAnswer option -> "option:" + option.optionId();
                                 case AnswerValue.NumericAnswer numeric -> "numeric:" + numeric.value();

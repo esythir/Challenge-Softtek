@@ -51,6 +51,17 @@ public class FirebaseFormRepository implements FormRepositoryPort {
                 var forms = querySnapshot.getDocuments().stream()
                         .map(doc -> {
                             // Converter dados do Firestore para Form
+                            var idField = doc.getLong("id");
+                            Long formId;
+                            if (idField != null) {
+                                formId = idField;
+                            } else {
+                                try {
+                                    formId = Long.valueOf(doc.getId());
+                                } catch (Exception ex) {
+                                    formId = 0L;
+                                }
+                            }
                             var periodicityDays = doc.getLong("periodicity");
                             var periodicity = periodicityDays != null ? new Periodicity(periodicityDays.intValue())
                                     : Periodicity.daily();
@@ -59,7 +70,7 @@ public class FirebaseFormRepository implements FormRepositoryPort {
                             var active = doc.getBoolean("active");
 
                             return Form.builder()
-                                    .id(Long.valueOf(doc.getId()))
+                                    .id(formId)
                                     .code(doc.getString("code"))
                                     .name(doc.getString("name"))
                                     .formType(FormType.valueOf(doc.getString("formType")))
@@ -110,6 +121,17 @@ public class FirebaseFormRepository implements FormRepositoryPort {
                 var forms = querySnapshot.getDocuments().stream()
                         .map(doc -> {
                             // Converter dados do Firestore para Form
+                            var idField = doc.getLong("id");
+                            Long formId;
+                            if (idField != null) {
+                                formId = idField;
+                            } else {
+                                try {
+                                    formId = Long.valueOf(doc.getId());
+                                } catch (Exception ex) {
+                                    formId = 0L;
+                                }
+                            }
                             var periodicityDays = doc.getLong("periodicity");
                             var periodicity = periodicityDays != null ? new Periodicity(periodicityDays.intValue())
                                     : Periodicity.daily();
@@ -118,7 +140,7 @@ public class FirebaseFormRepository implements FormRepositoryPort {
                             var active = doc.getBoolean("active");
 
                             return Form.builder()
-                                    .id(Long.valueOf(doc.getId()))
+                                    .id(formId)
                                     .code(doc.getString("code"))
                                     .name(doc.getString("name"))
                                     .formType(FormType.valueOf(doc.getString("formType")))
