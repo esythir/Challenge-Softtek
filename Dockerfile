@@ -1,28 +1,47 @@
-##########################################################
-# 1) STAGE DE BUILD (Maven + JDK 21)
-##########################################################
-FROM maven:3-eclipse-temurin-21 AS builder
+# Multi-stage build para otimizar a imagem
+FROM maven:3.9.6-openjdk-21-slim AS build
+
+# Definir diretório de trabalho
 WORKDIR /app
 
-# só copia o pom e resolve dependências
+# Copiar arquivos de dependências primeiro (para cache de layers)
 COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
+
+# Baixar dependências (cache layer)
 RUN mvn dependency:go-offline -B
 
-# copia restante do código e empacota
+# Copiar código fonte
 COPY src ./src
-RUN mvn clean package -DskipTests -B
 
-##########################################################
-# 2) STAGE DE RUNTIME (JRE 21 leve)
-##########################################################
-FROM eclipse-temurin:21-jre-jammy
+# Build da aplicação
+RUN mvn clean package -DskipTests
+
+# Stage de produção
+FROM openjdk:21-jre-slim
+
+# Instalar curl para health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Criar usuário não-root para segurança
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Definir diretório de trabalho
 WORKDIR /app
 
-# expõe porta HTTP
+# Copiar o JAR da aplicação do stage de build
+COPY --from=build /app/target/challenge-softteck-*.jar app.jar
+
+# Mudar para usuário não-root
+USER appuser
+
+# Expor porta da aplicação
 EXPOSE 8080
 
-# copia o JAR construído
-COPY --from=builder /app/target/challenge-softteck-0.0.1-SNAPSHOT.jar app.jar
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# comando de inicialização
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+# Comando para executar a aplicação
+ENTRYPOINT ["java", "-jar", "app.jar"]

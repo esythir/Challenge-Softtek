@@ -1,0 +1,164 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job de Build e Testes
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: challenge_softteck_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Configurar Java 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Cache dependências Maven
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Executar testes
+      run: mvn clean test
+      env:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/challenge_softteck_test
+        SPRING_DATASOURCE_USERNAME: postgres
+        SPRING_DATASOURCE_PASSWORD: postgres
+        SPRING_PROFILES_ACTIVE: test
+
+    - name: Build da aplicação
+      run: mvn clean package -DskipTests
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: jar-artifact
+        path: target/*.jar
+
+  # Job de Build da Imagem Docker
+  build-docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Configurar Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login no GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extrair metadados
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build e push da imagem Docker
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Job de Deploy para Staging
+  deploy-staging:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Deploy para Staging
+      run: |
+        echo "🚀 Deployando para ambiente de staging..."
+        echo "📦 Imagem: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
+        echo "✅ Deploy simulado para staging concluído!"
+
+    - name: Health Check Staging
+      run: |
+        echo "🏥 Verificando saúde do ambiente de staging..."
+        echo "✅ Health check simulado - ambiente saudável"
+
+  # Job de Deploy para Produção
+  deploy-production:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Deploy para Produção
+      run: |
+        echo "🚀 Deployando para ambiente de produção..."
+        echo "📦 Imagem: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        echo "✅ Deploy simulado para produção concluído!"
+
+    - name: Health Check Produção
+      run: |
+        echo "🏥 Verificando saúde do ambiente de produção..."
+        echo "✅ Health check simulado - ambiente saudável"
+
+  # Job de Notificação
+  notify:
+    needs: [deploy-staging, deploy-production]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notificar resultado
+      run: |
+        if [ "${{ needs.deploy-staging.result }}" == "success" ] || [ "${{ needs.deploy-production.result }}" == "success" ]; then
+          echo "✅ Deploy realizado com sucesso!"
+        else
+          echo "❌ Deploy falhou!"
+        fi
